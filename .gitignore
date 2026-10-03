@@ -1,0 +1,6 @@
+.vercel
+_shots/
+_backup/
+_*.html
+_*.py
+_*.json

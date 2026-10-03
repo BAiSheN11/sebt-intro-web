@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEBT.mfu — Automatic Star Excursion Balance Test Analysis</title>
+<meta name="description" content="SEBT.mfu is a browser-based clinical analysis system that measures the Star Excursion Balance Test automatically using computer vision. Developed at Mae Fah Luang University.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%239E1F2E'/%3E%3Cpath d='M32 10l5.2 13.2L51 26.6 39.5 36.2 42.8 50 32 42.6 21.2 50l3.3-13.8L13 26.6l13.8-3.4z' fill='%23F5F0E6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Source+Serif+4:wght@400;600;700;900&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&family=Noto+Serif+Thai:wght@600;700&display=swap">
+<style>
+  :root{
+    --paper:#F5F0E6;
+    --paper-deep:#EDE5D3;
+    --ink:#201B14;
+    --body:#4E473C;
+    --muted:#8C8374;
+    --crimson:#9E1F2E;
+    --crimson-deep:#7C1623;
+    --gold:#C4A15C;
+    --line:rgba(32,27,20,.16);
+    --white:#FFFFFF;
+    --serif:'Source Serif 4','Noto Serif Thai',Georgia,'Times New Roman',serif;
+    --sans:'DM Sans','Noto Sans Thai','Segoe UI','Leelawadee UI',Tahoma,system-ui,-apple-system,sans-serif;
+    --mono:'IBM Plex Mono','Consolas',monospace;
+    --maxw:1120px;
+    --nav-h:64px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+  body{
+    background:var(--paper);
+    color:var(--body);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--crimson);color:#fff}
+  a{color:var(--crimson);text-decoration:none}
+  a:hover{text-decoration:underline}
+  img,video{max-width:100%;display:block}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+
+  /* ===== nav ===== */
+  .nav{
+    position:sticky;top:0;z-index:50;
+    height:var(--nav-h);
+    background:rgba(245,240,230,.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-in{max-width:var(--maxw);margin:0 auto;padding:0 28px;height:100%;display:flex;align-items:center;justify-content:space-between;gap:22px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .brand svg{width:26px;height:26px;flex:none}
+  .brand small{font-weight:500;color:var(--muted);font-size:13px}
+  .nav-links{display:flex;align-items:center;gap:24px;font-size:14.5px;font-weight:500}
+  .nav-links a{color:var(--body)}
+  .nav-links a:hover{color:var(--crimson);text-decoration:none}
+  .nav-open{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#F5F0E6;font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px;transition:background .18s;white-space:nowrap}
+  .nav-open:hover{background:var(--crimson);text-decoration:none}
+  .lang-switch{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--paper-deep);padding:3px;flex:none}
+  .lang-btn{border:0;background:transparent;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);padding:5px 12px;border-radius:999px;cursor:pointer;letter-spacing:.02em;transition:all .18s;line-height:1.4}
+  .lang-btn:hover{color:var(--crimson)}
+  .lang-btn.active{background:var(--ink);color:#F5F0E6}
+  .lang-btn.active:hover{color:#F5F0E6}
+  .burger{display:none;background:none;border:0;cursor:pointer;width:40px;height:40px;border-radius:8px;flex:none}
+  .burger:hover{background:var(--paper-deep)}
+  .burger span{display:block;width:20px;height:2px;background:var(--ink);margin:4px auto;border-radius:2px}
+
+  /* ===== hero ===== */
+  .hero{position:relative;padding:84px 0 56px;border-bottom:1px solid var(--line)}
+  .hero::before{content:"";position:absolute;right:-180px;top:-180px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(196,161,92,.22),rgba(196,161,92,0) 65%);pointer-events:none}
+  .hero-grid{display:grid;grid-template-columns:7fr 5fr;gap:56px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--crimson);margin-bottom:22px}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--gold)}
+  .hero h1{font-family:var(--serif);font-weight:700;font-size:56px;line-height:1.08;letter-spacing:-.015em;color:var(--ink);margin-bottom:22px}
+  .hero h1 em{font-style:normal;color:var(--crimson)}
+  .hero p.lead{font-size:19px;line-height:1.6;color:var(--body);max-width:52ch;margin-bottom:30px}
+  .hero-cta{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:38px}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:15.5px;padding:13px 22px;border-radius:999px;transition:all .18s;border:1px solid transparent;white-space:nowrap}
+  .btn-primary{background:var(--crimson);color:#fff}
+  .btn-primary:hover{background:var(--crimson-deep);text-decoration:none;transform:translateY(-1px)}
+  .btn-ghost{border-color:var(--ink);color:var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:#F5F0E6;text-decoration:none;transform:translateY(-1px)}
+  .btn svg{width:16px;height:16px}
+  .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
+  .stat{padding:18px 20px 4px 0}
+  .stat b{display:block;font-family:var(--serif);font-size:30px;font-weight:700;color:var(--ink);line-height:1.1}
+  .stat span{font-size:13px;color:var(--muted);display:block;margin-top:2px}
+  .hero-shot{position:relative}
+  .shot-frame{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:0 24px 60px -28px rgba(32,27,20,.35)}
+  .shot-frame img{border-radius:6px;height:auto}
+  .shot-cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;display:flex;justify-content:space-between;gap:12px}
+  .shot-cap .dot{color:var(--gold)}
+
+  /* ===== sections ===== */
+  section{padding:84px 0;border-bottom:1px solid var(--line)}
+  .sec-head{margin-bottom:44px;max-width:760px}
+  .sec-no{font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--gold);text-transform:uppercase;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .sec-no::after{content:"";height:1px;width:64px;background:var(--line)}
+  .sec-head h2{font-family:var(--serif);font-size:40px;line-height:1.14;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px}
+  .sec-head p{font-size:17.5px;max-width:62ch}
+
+  /* ===== problem ===== */
+  .prob-grid{display:grid;grid-template-columns:5fr 7fr;gap:56px;align-items:start}
+  .pull{font-family:var(--serif);font-size:23px;line-height:1.45;color:var(--ink);border-left:3px solid var(--gold);padding-left:22px}
+  .pull b{color:var(--crimson)}
+  .prob-list{list-style:none}
+  .prob-list li{display:flex;gap:16px;padding:15px 0;border-bottom:1px solid var(--line);font-size:16.5px}
+  .prob-list li:first-child{padding-top:0}
+  .prob-list li:last-child{border-bottom:0}
+  .prob-list .n{font-family:var(--mono);color:var(--crimson);font-size:13px;flex:none;margin-top:4px}
+  .prob-list b{color:var(--ink);font-weight:600}
+
+  /* ===== the test ===== */
+  .test-grid{display:grid;grid-template-columns:5fr 7fr;gap:56px;align-items:center}
+  .test-copy p{margin-bottom:16px}
+  .test-copy p:last-child{margin-bottom:0}
+  .formula{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px 24px;margin:22px 0;font-family:var(--serif);font-size:19px;color:var(--ink);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .formula .frac{display:inline-flex;flex-direction:column;text-align:center;line-height:1.25;padding:0 6px}
+  .formula .frac .num{border-bottom:1.5px solid var(--ink);padding-bottom:3px}
+  .formula .frac .den{padding-top:3px}
+  .formula .eq{font-size:26px;color:var(--crimson)}
+  .formula .note{font-size:13px;color:var(--muted);font-family:var(--sans);flex-basis:100%}
+  .star-fig{display:flex;justify-content:center}
+  .star-card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:22px;text-align:center}
+  .star-card svg{width:100%;max-width:300px;height:auto}
+  .star-cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px;text-align:center}
+  .star-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin-top:14px;font-size:13.5px;color:var(--body)}
+  .star-legend span{display:inline-flex;align-items:center;gap:7px}
+  .star-legend i{width:9px;height:9px;border-radius:50%;background:var(--crimson);flex:none}
+
+  /* ===== pipeline ===== */
+  .pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:0;counter-reset:step}
+  .step{position:relative;padding:0 18px}
+  .step:not(:last-child)::after{content:"";position:absolute;right:-1px;top:22px;width:2px;height:calc(100% - 44px);background:var(--line)}
+  .step .dot{width:12px;height:12px;border-radius:50%;background:var(--crimson);margin-bottom:18px;position:relative;z-index:1}
+  .step .dot::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--crimson);opacity:.35}
+  .step h3{font-family:var(--serif);font-size:19px;color:var(--ink);margin-bottom:8px;line-height:1.25}
+  .step p{font-size:13.8px;line-height:1.55;color:var(--muted)}
+  .pipe-note{margin-top:30px;font-size:14px;color:var(--muted);border-top:1px dashed var(--line);padding-top:18px;display:flex;gap:10px;align-items:baseline}
+  .pipe-note .tag{font-family:var(--mono);color:var(--crimson);flex:none}
+
+  /* ===== demo ===== */
+  .demo-wrap{display:grid;grid-template-columns:7fr 5fr;gap:48px;align-items:start}
+  .video-box{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 24px 60px -30px rgba(32,27,20,.35)}
+  .video-box video{width:100%;aspect-ratio:16/9;background:#000 url('assets/demo-poster.jpg') center/contain no-repeat;border-radius:8px}
+  .demo-cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px}
+  .beats{list-style:none;counter-reset:beat}
+  .beats li{display:flex;gap:18px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .beats li:first-child{padding-top:0}
+  .beats li:last-child{border-bottom:0}
+  .beats .bn{font-family:var(--mono);color:var(--crimson);font-size:13px;flex:none;margin-top:3px}
+  .beats b{color:var(--ink)}
+  .beats p{font-size:15px;line-height:1.55;margin-top:3px}
+
+  /* ===== scoring ===== */
+  .score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-left:0;background:var(--white)}
+  .score-item{padding:26px 24px;border-left:1px solid var(--line)}
+  .score-item .wt{font-family:var(--mono);font-size:12px;color:var(--gold);letter-spacing:.08em}
+  .score-item h3{font-family:var(--serif);font-size:20px;color:var(--ink);margin:8px 0 10px;line-height:1.2}
+  .score-item p{font-size:14px;line-height:1.6;color:var(--muted)}
+  .score-under{margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:36px}
+  .score-under h4{font-family:var(--serif);font-size:21px;color:var(--ink);margin-bottom:12px}
+  .score-under p{font-size:15.5px;margin-bottom:12px}
+  .mini-table{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}
+  .mini-table th{text-align:left;font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px 8px 0;border-bottom:1px solid var(--ink)}
+  .mini-table td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);color:var(--body)}
+  .mini-table td:first-child{color:var(--ink);font-weight:500}
+  .tag-soft,.tag-hard{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+  .tag-soft{background:rgba(158,31,46,.08);color:var(--crimson)}
+  .tag-hard{background:var(--ink);color:#F5F0E6}
+
+  /* ===== tech ===== */
+  .tech-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--ink)}
+  .tech-item{padding:28px 26px 28px 0}
+  .tech-item:nth-child(2){padding-left:26px;border-left:1px solid var(--line)}
+  .tech-item:nth-child(3){padding-left:26px;border-left:1px solid var(--line)}
+  .tech-item svg{width:24px;height:24px;stroke:var(--crimson);margin-bottom:14px}
+  .tech-item h3{font-family:var(--serif);font-size:19px;color:var(--ink);margin-bottom:8px}
+  .tech-item p{font-size:14.5px;line-height:1.6;color:var(--muted)}
+  .tech-note{margin-top:26px;font-size:14px;color:var(--muted);border-top:1px dashed var(--line);padding-top:16px}
+  .tech-note a{font-weight:600}
+
+  /* ===== references ===== */
+  .ref-list{list-style:none}
+  .ref-list li{display:grid;grid-template-columns:64px 1fr;gap:18px;padding:16px 0;border-bottom:1px solid var(--line);font-size:15px;line-height:1.6}
+  .ref-list li:last-child{border-bottom:0}
+  .ref-list .rn{font-family:var(--mono);color:var(--gold);font-size:13px;margin-top:2px}
+  .ref-list b{color:var(--ink);font-weight:600}
+  .ref-list a{word-break:break-all}
+
+  /* ===== about ===== */
+  .about-grid{display:grid;grid-template-columns:6fr 6fr;gap:48px}
+  .about-grid h3{font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:14px}
+  .about-grid p{font-size:15.5px;margin-bottom:14px}
+  .about-meta{display:grid;gap:10px;font-size:14.5px}
+  .about-meta div{display:flex;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .about-meta .k{font-family:var(--mono);color:var(--muted);font-size:12.5px;flex:none;width:120px;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+  .about-meta .v{color:var(--ink)}
+
+  /* ===== footer ===== */
+  footer{padding:44px 0 52px}
+  .foot-in{display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted)}
+  .foot-in .brand small{font-size:12.5px}
+  .foot-in a{color:var(--body)}
+  .foot-in a:hover{color:var(--crimson);text-decoration:none}
+
+  /* ===== reveal ===== */
+  .rv{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s ease}
+  .rv.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none}}
+
+  /* ===== responsive ===== */
+  @media (max-width:980px){
+    .hero{padding:64px 0 44px}
+    .hero h1{font-size:44px}
+    .hero-grid{grid-template-columns:1fr;gap:40px}
+    .hero-shot{max-width:640px}
+    .prob-grid,.test-grid,.demo-wrap,.about-grid{grid-template-columns:1fr;gap:36px}
+    .pipe{grid-template-columns:repeat(2,1fr);row-gap:28px}
+    .step:nth-child(2)::after{display:none}
+    .step:nth-child(4)::after{display:none}
+    .score-grid{grid-template-columns:repeat(2,1fr)}
+    .score-item:nth-child(3){border-left:0;border-top:1px solid var(--line)}
+    .score-item:nth-child(4){border-top:1px solid var(--line)}
+    .score-under{grid-template-columns:1fr}
+    .tech-grid{grid-template-columns:1fr}
+    .tech-item:nth-child(2){padding-left:0;border-left:0;border-top:1px solid var(--line)}
+    .tech-item:nth-child(3){padding-left:0;border-left:0;border-top:1px solid var(--line)}
+    .nav-links{display:none;position:absolute;top:var(--nav-h);left:0;right:0;background:var(--paper);border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start;gap:0;padding:8px 28px 18px}
+    .nav-links.open{display:flex}
+    .nav-links a{width:100%;padding:12px 0;border-bottom:1px solid var(--line);font-size:16px}
+    .burger{display:block}
+    .nav-open{margin-left:auto}
+  }
+  @media (max-width:560px){
+    body{font-size:16px}
+    section{padding:64px 0}
+    .hero h1{font-size:36px}
+    .hero-stats{grid-template-columns:repeat(2,1fr)}
+    .pipe{grid-template-columns:1fr}
+    .step::after{display:none!important}
+    .score-grid{grid-template-columns:1fr}
+    .score-item{border-left:0!important;border-top:1px solid var(--line)}
+    .score-item:first-child{border-top:0}
+    .sec-head h2{font-size:32px}
+    .brand small{display:none}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top" aria-label="SEBT.mfu home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#9E1F2E"/><path d="M32 10l5.2 13.2L51 26.6 39.5 36.2 42.8 50 32 42.6 21.2 50l3.3-13.8L13 26.6l13.8-3.4z" fill="#F5F0E6"/></svg>
+      <span>SEBT.mfu <small data-i18n="nav.mfu">· Mae Fah Luang University</small></span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#test" data-i18n="nav.test">The test</a>
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#demo" data-i18n="nav.demo">Demo</a>
+      <a href="#scoring" data-i18n="nav.scoring">Scoring</a>
+      <a href="#tech" data-i18n="nav.tech">Technology</a>
+      <a class="nav-open" href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener"><span data-i18n="nav.cta">Open the app</span>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button class="lang-btn" data-lang="en" type="button" aria-pressed="true">EN</button>
+      <button class="lang-btn" data-lang="th" type="button" aria-pressed="false">ไทย</button>
+    </div>
+    <button class="burger" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid rv">
+      <div>
+        <div class="eyebrow" data-i18n="hero.eyebrow">SEBT Clinical Analysis System · v2.1</div>
+        <h1 data-i18n-html="hero.h1">Measuring the <em>Star Excursion Balance Test</em>, automatically.</h1>
+        <p class="lead" data-i18n="hero.lead">SEBT.mfu is a browser-based system that turns a phone or webcam recording of the Star Excursion Balance Test into a quantified clinical assessment — reach distance, balance stability, contact quality and movement form, scored per direction and exported as a report.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#demo">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>
+            <span data-i18n="hero.watch">Watch the demo</span>
+          </a>
+          <a class="btn btn-ghost" href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener"><span data-i18n="hero.live">Open the live app</span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h9M9 4l4 4-4 4"/></svg>
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><b>8</b><span data-i18n="hero.stat1">reach directions tracked</span></div>
+          <div class="stat"><b>33</b><span data-i18n="hero.stat2">body landmarks tracked</span></div>
+          <div class="stat"><b>4</b><span data-i18n="hero.stat3">quality dimensions scored</span></div>
+          <div class="stat"><b>100%</b><span data-i18n="hero.stat4">analysis in the browser</span></div>
+        </div>
+      </div>
+      <div class="hero-shot">
+        <div class="shot-frame">
+          <img src="assets/hero-shot.jpg" alt="SEBT.mfu analysis screen showing a participant with pose skeleton overlay and scoring panel" width="1920" height="1080">
+        </div>
+        <div class="shot-cap"><span data-i18n="hero.cap1">Live analysis · pose skeleton + per-direction scores</span><span class="dot" data-i18n="hero.cap2">● recording</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="problem.no">01 · The problem</div>
+      <h2 data-i18n="problem.title">A well-established clinical test, still measured by hand.</h2>
+      <p data-i18n="problem.lead">The Star Excursion Balance Test (SEBT) is a core dynamic postural-control assessment in sports medicine and rehabilitation. But running it in practice is slow, manual and examiner-dependent.</p>
+    </div>
+    <div class="prob-grid">
+      <div class="pull" data-i18n-html="problem.pull">
+        A reach that takes the athlete a second to perform can take a clinician several minutes to <b>set up, measure, record and verify</b> — and the numbers still depend on who is reading the tape.
+      </div>
+      <ul class="prob-list">
+        <li><span class="n">01</span><span data-i18n-html="problem.p1"><b>Physical tape-and-grid setup</b> — the star grid, tape measure and consistent positioning must be prepared before every session.</span></li>
+        <li><span class="n">02</span><span data-i18n-html="problem.p2"><b>Manual reading</b> — reach distance is read by eye from a tape measure at the moment of maximal reach.</span></li>
+        <li><span class="n">03</span><span data-i18n-html="problem.p3"><b>Examiner variability</b> — measurement quality depends on training, attention and the examiner's interpretation of each attempt.</span></li>
+        <li><span class="n">04</span><span data-i18n-html="problem.p4"><b>Slow documentation</b> — scores are transcribed by hand; per-trial, per-direction records and reports are tedious to compile.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="test">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="test.no">02 · The test</div>
+      <h2 data-i18n="test.title">What the Star Excursion Balance Test measures</h2>
+      <p data-i18n="test.lead">The subject stands on one leg in the centre of a star grid and reaches as far as possible with the opposite leg, then returns to the starting position — a maximal reach under single-leg balance that challenges dynamic postural control.</p>
+    </div>
+    <div class="test-grid">
+      <div class="test-copy">
+        <p data-i18n-html="test.p1">Each reach is recorded per direction. The key clinical metric is the <b>normalized reach distance</b> — the reach expressed as a percentage of the subject's leg length, which removes the effect of body size and makes scores comparable across individuals.</p>
+        <div class="formula">
+          <span data-i18n="test.formulaLabel">Normalized reach</span>
+          <span class="eq">=</span>
+          <span class="frac"><span class="num">reach distance (cm)</span><span class="den">leg length (cm)</span></span>
+          <span class="eq">× 100</span>
+          <span class="note" data-i18n="test.formulaNote">Leg length measured from ASIS to the medial malleolus, following clinical protocol. The mean of three trials per direction forms the composite score.</span>
+        </div>
+        <p data-i18n="test.p2">SEBT performance is used to screen and monitor dynamic balance in areas such as ankle instability and ACL rehabilitation, where reach asymmetry and reduced excursion signal neuromuscular deficits.</p>
+      </div>
+      <div class="star-fig">
+        <div class="star-card">
+          <svg viewBox="0 0 340 340" role="img" aria-label="Star grid with the eight reach directions">
+            <circle cx="170" cy="170" r="150" fill="#F5F0E6" stroke="rgba(32,27,20,.18)"/>
+            <circle cx="170" cy="170" r="76" fill="none" stroke="rgba(32,27,20,.10)"/>
+            <circle cx="170" cy="170" r="4" fill="#9E1F2E"/>
+            <g stroke="rgba(32,27,20,.28)" stroke-width="1">
+              <line x1="170" y1="20" x2="170" y2="320"/>
+              <line x1="20" y1="170" x2="320" y2="170"/>
+              <line x1="64" y1="64" x2="276" y2="276"/>
+              <line x1="276" y1="64" x2="64" y2="276"/>
+              <line x1="108" y1="32" x2="232" y2="308"/>
+              <line x1="232" y1="32" x2="108" y2="308"/>
+              <line x1="32" y1="108" x2="308" y2="232"/>
+              <line x1="308" y1="108" x2="32" y2="232"/>
+            </g>
+            <g font-family="'IBM Plex Mono',monospace" font-size="13" fill="#8C8374" text-anchor="middle">
+              <text x="170" y="14">ANT</text>
+              <text x="170" y="332">POST</text>
+              <text x="14" y="176">LAT</text>
+              <text x="326" y="176">MED</text>
+              <text x="44" y="44">AL</text>
+              <text x="296" y="44">AM</text>
+              <text x="296" y="290">PM</text>
+              <text x="44" y="290">PL</text>
+            </g>
+            <g stroke="#9E1F2E" stroke-width="2.6">
+              <line x1="170" y1="170" x2="170" y2="20"/>
+              <line x1="170" y1="170" x2="276" y2="276"/>
+              <line x1="170" y1="170" x2="64" y2="276"/>
+            </g>
+          </svg>
+          <div class="star-legend" data-i18n="test.legendAll">All eight star directions: ANT · AL · LAT · PL · POST · PM · MED · AM</div>
+          <div class="star-cap" data-i18n="test.cap">Three reaches per direction · stance leg alternated · the mean of trials forms the composite score</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="how.no">03 · How it works</div>
+      <h2 data-i18n="how.title">From raw video to a clinical score, in six steps.</h2>
+      <p data-i18n="how.lead">SEBT.mfu runs a complete pose-estimation analysis pipeline in the browser. A phone or webcam recording is all that is needed — no special hardware, no installed software.</p>
+    </div>
+    <div class="pipe">
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s1t">Input</h3><p data-i18n="how.s1">A recording of the SEBT session is loaded, or analysed live from the camera.</p></div>
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s2t">Pose estimation</h3><p data-i18n="how.s2">33 body landmarks are tracked per frame with MediaPipe Pose — hips, knees, ankles and trunk.</p></div>
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s3t">Calibration</h3><p data-i18n="how.s3">Stance leg is auto-detected, floor and grid reference are locked, and direction orientation is verified (Flip A/P).</p></div>
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s4t">Reach detection</h3><p data-i18n="how.s4">Each reach event is recognised per direction, with contact quality and touch impact classified.</p></div>
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s5t">Scoring</h3><p data-i18n="how.s5">Reach distance is computed in cm and normalized to leg length; four quality dimensions are scored.</p></div>
+      <div class="step"><div class="dot"></div><h3 data-i18n="how.s6t">Report</h3><p data-i18n="how.s6">A clinical analysis report is generated — on-screen, printable, and exportable as CSV or JSON.</p></div>
+    </div>
+    <div class="pipe-note"><span class="tag" data-i18n="how.noteTag">Privacy note</span><span data-i18n="how.note">Every step runs client-side. The video never leaves the browser, which makes the tool suitable for patient data in a clinical setting.</span></div>
+  </div>
+</section>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="demo.no">04 · Demo</div>
+      <h2 data-i18n="demo.title">Watch a full analysis run in under a minute.</h2>
+      <p data-i18n="demo.lead">This screen recording shows a complete session: loading a test video, watching the pose-tracked analysis, and reviewing the automatically computed scores and contact-level detail.</p>
+    </div>
+    <div class="demo-wrap">
+      <div>
+        <div class="video-box">
+          <video src="assets/demo-recording.mp4" controls preload="metadata" aria-label="SEBT.mfu demo recording"></video>
+        </div>
+        <div class="demo-cap" data-i18n="demo.cap">SEBT.mfu v2.1 · recorded screen test · 44 s</div>
+      </div>
+      <ul class="beats">
+        <li><span class="bn">1</span><div><b data-i18n="demo.b1t">Session set-up</b><p data-i18n="demo.b1">Participant ID, age, trial number, tester and leg length are entered; stance-leg detection and model (Full) are configured.</p></div></li>
+        <li><span class="bn">2</span><div><b data-i18n="demo.b2t">Pose-tracked playback</b><p data-i18n="demo.b2">The recording plays with a live skeleton overlay. Calibration locks, stance side and floor are detected, 3D tracking activates.</p></div></li>
+        <li><span class="bn">3</span><div><b data-i18n="demo.b3t">Automatic scoring</b><p data-i18n="demo.b3">A composite score is computed from four dimensions — reach distance, balance and stability, contact quality, and form — with an overall PASS / FAIL verdict.</p></div></li>
+        <li><span class="bn">4</span><div><b data-i18n="demo.b4t">Detail and export</b><p data-i18n="demo.b4">The reach profile is compared with a population mean, per-contact events are listed (direction, reach, impact velocity, touch type), and CSV / JSON / print output is one click away.</p></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="scoring">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="scoring.no">05 · Scoring</div>
+      <h2 data-i18n="scoring.title">One composite score, four evidence-backed dimensions.</h2>
+      <p data-i18n="scoring.lead">The overall verdict and composite score are derived from four weighted dimensions, each computed from the pose and contact data captured during the session.</p>
+    </div>
+    <div class="score-grid">
+      <div class="score-item"><div class="wt" data-i18n="scoring.wt1">DIMENSION · WEIGHT 35%</div><h3 data-i18n="scoring.d1t">Reach Distance</h3><p data-i18n="scoring.d1">How far the reach leg travels in each direction, normalized to leg length — the classic SEBT excursion metric.</p></div>
+      <div class="score-item"><div class="wt" data-i18n="scoring.wt2">DIMENSION · WEIGHT 25%</div><h3 data-i18n="scoring.d2t">Balance &amp; Stability</h3><p data-i18n="scoring.d2">Quality of the single-leg stance throughout the reach: stance-foot stability and stance-heel lift behaviour.</p></div>
+      <div class="score-item"><div class="wt" data-i18n="scoring.wt3">DIMENSION · WEIGHT 20%</div><h3 data-i18n="scoring.d3t">Contact Quality</h3><p data-i18n="scoring.d3">How cleanly the reach foot touches down — classified as soft or hard contact from impact velocity and bounce.</p></div>
+      <div class="score-item"><div class="wt" data-i18n="scoring.wt4">DIMENSION · WEIGHT 20%</div><h3 data-i18n="scoring.d4t">Form &amp; Posture</h3><p data-i18n="scoring.d4">Movement control during the task, including trunk lean and overall posture consistency across trials.</p></div>
+    </div>
+    <div class="score-under">
+      <div>
+        <h4 data-i18n="scoring.profTitle">Per-direction reach profile</h4>
+        <p data-i18n="scoring.prof">Each direction is scored independently and visualised on a reach profile, so asymmetry between directions and between left and right stance legs is immediately visible.</p>
+        <p data-i18n="scoring.prof2">The subject's profile can be compared against a population reference — the in-app comparison uses an open Y-Balance test dataset (University College Dublin).</p>
+      </div>
+      <div>
+        <h4 data-i18n="scoring.evTitle">Contact-level evidence</h4>
+        <p data-i18n="scoring.ev">Every reach event is recorded in a table with direction, reach (as % of leg length), impact velocity, bounce, quality, and a measurement-confidence value that reflects how many contact frames were directly observed.</p>
+        <table class="mini-table">
+          <colgroup><col style="width:26%"><col style="width:22%"><col style="width:22%"><col style="width:30%"></colgroup>
+          <thead><tr><th data-i18n="scoring.thDir">Direction</th><th data-i18n="scoring.thReach">Reach</th><th data-i18n="scoring.thImpact">Impact vel.</th><th data-i18n="scoring.thTouch">Touch</th></tr></thead>
+          <tbody>
+            <tr><td>Anterior</td><td>62% leg</td><td>−0.34</td><td><span class="tag-soft">soft</span></td></tr>
+            <tr><td>Anteromedial</td><td>68% leg</td><td>−0.32</td><td><span class="tag-soft">soft</span></td></tr>
+            <tr><td>Anterior</td><td>48% leg</td><td>−2.38</td><td><span class="tag-hard">hard</span></td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:10px;font-size:13px;color:var(--muted)" data-i18n="scoring.tableNote">Sample rows from the app's contact-events table (illustrative values from the demo recording).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tech">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="tech.no">06 · Technology</div>
+      <h2 data-i18n="tech.title">A lightweight, modern stack that runs anywhere.</h2>
+      <p data-i18n="tech.lead">SEBT.mfu is a web application — open a URL, grant camera access, and the full clinical analysis is available. No installation, no plugins, no server-side processing.</p>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        <h3 data-i18n="tech.c1t">Computer vision</h3>
+        <p data-i18n="tech.c1">MediaPipe Pose Landmarker estimates 33 body landmarks per frame, with selectable Full / Heavy / Lite models to trade accuracy against device performance.</p>
+      </div>
+      <div class="tech-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8.5 12h7M12 8.5v7"/></svg>
+        <h3 data-i18n="tech.c2t">Web platform</h3>
+        <p data-i18n="tech.c2">Built with React and Vite, styled with Tailwind CSS, and deployed on Vercel — a responsive single-page experience for desktop, laptop and mobile browsers.</p>
+      </div>
+      <div class="tech-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 9.5-4-1.3-7-5-7-9.5V6l7-3z"/><path d="M9.5 12l2 2 3.5-4"/></svg>
+        <h3 data-i18n="tech.c3t">Clinical reporting</h3>
+        <p data-i18n="tech.c3">Scores, per-direction results and contact events are compiled into a printable clinical report, with CSV and JSON export for research records and further analysis.</p>
+      </div>
+    </div>
+    <div class="tech-note" data-i18n-html="tech.note">The application is hosted live at <a href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener">sebt-mfu.vercel.app</a> — you can open it and try a session directly in your browser.</div>
+  </div>
+</section>
+
+<section id="refs">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="refs.no">References</div>
+      <h2 data-i18n="refs.title">Clinical grounding</h2>
+      <p data-i18n="refs.lead">The test protocol, normalization method and composite-score approach follow the established SEBT literature.</p>
+    </div>
+    <ul class="ref-list">
+      <li><span class="rn">[1]</span><div><b>Gribble, P. A., Hertel, J., &amp; Plisky, P.</b> Using the Star Excursion Balance Test to assess dynamic postural-control deficits and outcomes in lower extremity injury: a literature and systematic review. <i>Journal of Athletic Training</i>.<br><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3784363/" target="_blank" rel="noopener">pmc.ncbi.nlm.nih.gov/articles/PMC3784363</a></div></li>
+      <li><span class="rn">[2]</span><div><b>Kanko, R., et al.</b> The Star Excursion Balance Test: An update review and practical guidelines. <i>International Journal of Athletic Therapy and Training</i>.<br><a href="https://journals.humankinetics.com/downloadpdf/journals/ijatt/26/6/article-p285.pdf" target="_blank" rel="noopener">journals.humankinetics.com · ijatt 26(6)</a></div></li>
+      <li><span class="rn">[3]</span><div><b>Frontiers in Sports and Active Living, 2022.</b> Protocol for normalized reach distance and composite score computation in the SEBT.<br><a href="https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2022.902886/" target="_blank" rel="noopener">frontiersin.org · 10.3389/fspor.2022.902886</a></div></li>
+      <li><span class="rn">[4]</span><div><b>Pilsky, P. J., et al.</b> The reliability and validity of computerized tools for quantifying the Star Excursion Balance Test. <i>International Journal of Sports Physical Therapy</i>.<br><a href="https://ijspt.scholasticahq.com/article/137953" target="_blank" rel="noopener">ijspt.scholasticahq.com/article/137953</a></div></li>
+    </ul>
+  </div>
+</section>
+
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-no" data-i18n="about.no">About the project</div>
+      <h2 data-i18n="about.title">A student research project at Mae Fah Luang University</h2>
+    </div>
+    <div class="about-grid">
+      <div>
+        <h3 data-i18n="about.mot">Motivation</h3>
+        <p data-i18n="about.m1">This project started from a simple observation: the balance tests that physiotherapists and sports-medicine clinicians use every day still rely on tape measures and handwritten notes. Computer vision has reached the point where the same measurements can be extracted automatically from an ordinary video.</p>
+        <p data-i18n="about.m2">SEBT.mfu is a working demonstration of that idea — a full analysis pipeline that any clinic can run from a web browser, with outputs that follow the published clinical method.</p>
+      </div>
+      <div>
+        <h3 data-i18n="about.details">Project details</h3>
+        <div class="about-meta">
+          <div><span class="k" data-i18n="about.kInst">Institution</span><span class="v" data-i18n="about.vInst">Mae Fah Luang University, Chiang Rai, Thailand</span></div>
+          <div><span class="k" data-i18n="about.kSys">System</span><span class="v" data-i18n="about.vSys">SEBT Clinical Analysis System · v2.1</span></div>
+          <div><span class="k" data-i18n="about.kRes">Researchers</span><span class="v">Aung Kaung Pyae (KAi) · Swan Htet Htun (JJ)</span></div>
+          <div><span class="k" data-i18n="about.kSup">Supervisors</span><span class="v">Dr. Surapong Uttama · Dr. Worasak Rueangsirarak</span></div>
+          <div><span class="k" data-i18n="about.kLive">Live app</span><span class="v"><a href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener">sebt-mfu.vercel.app</a></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#9E1F2E"/><path d="M32 10l5.2 13.2L51 26.6 39.5 36.2 42.8 50 32 42.6 21.2 50l3.3-13.8L13 26.6l13.8-3.4z" fill="#F5F0E6"/></svg>
+      <span>SEBT.mfu</span>
+    </a>
+    <div data-i18n="footer.link">sebt-mfu.vercel.app · Mae Fah Luang University</div>
+    <div data-i18n-html="footer.copy">© <span id="year">2026</span> · Student research project</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var burger=document.querySelector('.burger');
+    var links=document.getElementById('navLinks');
+    burger.addEventListener('click',function(){
+      var open=links.classList.toggle('open');
+      burger.setAttribute('aria-expanded',open?'true':'false');
+    });
+    links.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click',function(){links.classList.remove('open');burger.setAttribute('aria-expanded','false');});
+    });
+
+    var year=document.getElementById('year');
+    if(year){year.textContent=new Date().getFullYear();}
+
+    var LANGS={en:{},th:{}};
+    LANGS.en={
+      'nav.mfu':'· Mae Fah Luang University',
+      'nav.test':'The test','nav.how':'How it works','nav.demo':'Demo','nav.scoring':'Scoring','nav.tech':'Technology','nav.cta':'Open the app',
+      'hero.eyebrow':'SEBT Clinical Analysis System · v2.1',
+      'hero.h1':'Measuring the <em>Star Excursion Balance Test</em>, automatically.',
+      'hero.lead':'SEBT.mfu is a browser-based system that turns a phone or webcam recording of the Star Excursion Balance Test into a quantified clinical assessment — reach distance, balance stability, contact quality and movement form, scored per direction and exported as a report.',
+      'hero.watch':'Watch the demo','hero.live':'Open the live app',
+      'hero.stat1':'reach directions tracked','hero.stat2':'body landmarks tracked','hero.stat3':'quality dimensions scored','hero.stat4':'analysis in the browser',
+      'hero.cap1':'Live analysis · pose skeleton + per-direction scores','hero.cap2':'● recording',
+      'problem.no':'01 · The problem','problem.title':'A well-established clinical test, still measured by hand.',
+      'problem.lead':'The Star Excursion Balance Test (SEBT) is a core dynamic postural-control assessment in sports medicine and rehabilitation. But running it in practice is slow, manual and examiner-dependent.',
+      'problem.pull':'A reach that takes the athlete a second to perform can take a clinician several minutes to <b>set up, measure, record and verify</b> — and the numbers still depend on who is reading the tape.',
+      'problem.p1':'<b>Physical tape-and-grid setup</b> — the star grid, tape measure and consistent positioning must be prepared before every session.',
+      'problem.p2':'<b>Manual reading</b> — reach distance is read by eye from a tape measure at the moment of maximal reach.',
+      'problem.p3':'<b>Examiner variability</b> — measurement quality depends on training, attention and the examiner\u2019s interpretation of each attempt.',
+      'problem.p4':'<b>Slow documentation</b> — scores are transcribed by hand; per-trial, per-direction records and reports are tedious to compile.',
+      'test.no':'02 · The test','test.title':'What the Star Excursion Balance Test measures',
+      'test.lead':'The subject stands on one leg in the centre of a star grid and reaches as far as possible with the opposite leg, then returns to the starting position — a maximal reach under single-leg balance that challenges dynamic postural control.',
+      'test.p1':'Each reach is recorded per direction. The key clinical metric is the <b>normalized reach distance</b> — the reach expressed as a percentage of the subject\u2019s leg length, which removes the effect of body size and makes scores comparable across individuals.',
+      'test.formulaLabel':'Normalized reach',
+      'test.formulaNote':'Leg length measured from ASIS to the medial malleolus, following clinical protocol. The mean of three trials per direction forms the composite score.',
+      'test.p2':'SEBT performance is used to screen and monitor dynamic balance in areas such as ankle instability and ACL rehabilitation, where reach asymmetry and reduced excursion signal neuromuscular deficits.',
+      'test.legendAll':'All eight star directions: ANT · AL · LAT · PL · POST · PM · MED · AM','test.cap':'Three reaches per direction · stance leg alternated · the mean of trials forms the composite score',
+      'how.no':'03 · How it works','how.title':'From raw video to a clinical score, in six steps.',
+      'how.lead':'SEBT.mfu runs a complete pose-estimation analysis pipeline in the browser. A phone or webcam recording is all that is needed — no special hardware, no installed software.',
+      'how.s1t':'Input','how.s1':'A recording of the SEBT session is loaded, or analysed live from the camera.',
+      'how.s2t':'Pose estimation','how.s2':'33 body landmarks are tracked per frame with MediaPipe Pose — hips, knees, ankles and trunk.',
+      'how.s3t':'Calibration','how.s3':'Stance leg is auto-detected, floor and grid reference are locked, and direction orientation is verified (Flip A/P).',
+      'how.s4t':'Reach detection','how.s4':'Each reach event is recognised per direction, with contact quality and touch impact classified.',
+      'how.s5t':'Scoring','how.s5':'Reach distance is computed in cm and normalized to leg length; four quality dimensions are scored.',
+      'how.s6t':'Report','how.s6':'A clinical analysis report is generated — on-screen, printable, and exportable as CSV or JSON.',
+      'how.noteTag':'Privacy note','how.note':'Every step runs client-side. The video never leaves the browser, which makes the tool suitable for patient data in a clinical setting.',
+      'demo.no':'04 · Demo','demo.title':'Watch a full analysis run in under a minute.',
+      'demo.lead':'This screen recording shows a complete session: loading a test video, watching the pose-tracked analysis, and reviewing the automatically computed scores and contact-level detail.',
+      'demo.cap':'SEBT.mfu v2.1 · recorded screen test · 44 s',
+      'demo.b1t':'Session set-up','demo.b1':'Participant ID, age, trial number, tester and leg length are entered; stance-leg detection and model (Full) are configured.',
+      'demo.b2t':'Pose-tracked playback','demo.b2':'The recording plays with a live skeleton overlay. Calibration locks, stance side and floor are detected, 3D tracking activates.',
+      'demo.b3t':'Automatic scoring','demo.b3':'A composite score is computed from four dimensions — reach distance, balance and stability, contact quality, and form — with an overall PASS / FAIL verdict.',
+      'demo.b4t':'Detail and export','demo.b4':'The reach profile is compared with a population mean, per-contact events are listed (direction, reach, impact velocity, touch type), and CSV / JSON / print output is one click away.',
+      'scoring.no':'05 · Scoring','scoring.title':'One composite score, four evidence-backed dimensions.',
+      'scoring.lead':'The overall verdict and composite score are derived from four weighted dimensions, each computed from the pose and contact data captured during the session.',
+      'scoring.wt1':'DIMENSION · WEIGHT 35%','scoring.wt2':'DIMENSION · WEIGHT 25%','scoring.wt3':'DIMENSION · WEIGHT 20%','scoring.wt4':'DIMENSION · WEIGHT 20%',
+      'scoring.d1t':'Reach Distance','scoring.d1':'How far the reach leg travels in each direction, normalized to leg length — the classic SEBT excursion metric.',
+      'scoring.d2t':'Balance & Stability','scoring.d2':'Quality of the single-leg stance throughout the reach: stance-foot stability and stance-heel lift behaviour.',
+      'scoring.d3t':'Contact Quality','scoring.d3':'How cleanly the reach foot touches down — classified as soft or hard contact from impact velocity and bounce.',
+      'scoring.d4t':'Form & Posture','scoring.d4':'Movement control during the task, including trunk lean and overall posture consistency across trials.',
+      'scoring.profTitle':'Per-direction reach profile','scoring.prof':'Each direction is scored independently and visualised on a reach profile, so asymmetry between directions and between left and right stance legs is immediately visible.',
+      'scoring.prof2':'The subject\u2019s profile can be compared against a population reference — the in-app comparison uses an open Y-Balance test dataset (University College Dublin).',
+      'scoring.evTitle':'Contact-level evidence','scoring.ev':'Every reach event is recorded in a table with direction, reach (as % of leg length), impact velocity, bounce, quality, and a measurement-confidence value that reflects how many contact frames were directly observed.',
+      'scoring.thDir':'Direction','scoring.thReach':'Reach','scoring.thImpact':'Impact vel.','scoring.thTouch':'Touch',
+      'scoring.tableNote':'Sample rows from the app\u2019s contact-events table (illustrative values from the demo recording).',
+      'tech.no':'06 · Technology','tech.title':'A lightweight, modern stack that runs anywhere.',
+      'tech.lead':'SEBT.mfu is a web application — open a URL, grant camera access, and the full clinical analysis is available. No installation, no plugins, no server-side processing.',
+      'tech.c1t':'Computer vision','tech.c1':'MediaPipe Pose Landmarker estimates 33 body landmarks per frame, with selectable Full / Heavy / Lite models to trade accuracy against device performance.',
+      'tech.c2t':'Web platform','tech.c2':'Built with React and Vite, styled with Tailwind CSS, and deployed on Vercel — a responsive single-page experience for desktop, laptop and mobile browsers.',
+      'tech.c3t':'Clinical reporting','tech.c3':'Scores, per-direction results and contact events are compiled into a printable clinical report, with CSV and JSON export for research records and further analysis.',
+      'tech.note':'The application is hosted live at <a href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener">sebt-mfu.vercel.app</a> — you can open it and try a session directly in your browser.',
+      'refs.no':'References','refs.title':'Clinical grounding',
+      'refs.lead':'The test protocol, normalization method and composite-score approach follow the established SEBT literature.',
+      'about.no':'About the project','about.title':'A student research project at Mae Fah Luang University',
+      'about.mot':'Motivation','about.m1':'This project started from a simple observation: the balance tests that physiotherapists and sports-medicine clinicians use every day still rely on tape measures and handwritten notes. Computer vision has reached the point where the same measurements can be extracted automatically from an ordinary video.',
+      'about.m2':'SEBT.mfu is a working demonstration of that idea — a full analysis pipeline that any clinic can run from a web browser, with outputs that follow the published clinical method.',
+      'about.details':'Project details',
+      'about.kInst':'Institution','about.vInst':'Mae Fah Luang University, Chiang Rai, Thailand',
+      'about.kSys':'System','about.vSys':'SEBT Clinical Analysis System · v2.1',
+      'about.kRes':'Researchers','about.kSup':'Supervisors','about.kLive':'Live app',
+      'footer.link':'sebt-mfu.vercel.app · Mae Fah Luang University','footer.copy':'© <span id="year">2026</span> · Student research project'
+    };
+    LANGS.th={
+      'nav.mfu':'· มหาวิทยาลัยแม่ฟ้าหลวง',
+      'nav.test':'การทดสอบ','nav.how':'วิธีการทำงาน','nav.demo':'ตัวอย่างสาธิต','nav.scoring':'การให้คะแนน','nav.tech':'เทคโนโลยี','nav.cta':'เปิดแอปพลิเคชัน',
+      'hero.eyebrow':'ระบบวิเคราะห์ทางคลินิก SEBT · v2.1',
+      'hero.h1':'วัดการทดสอบ <em>Star Excursion Balance</em> โดยอัตโนมัติ',
+      'hero.lead':'SEBT.mfu เป็นระบบที่ทำงานในเบราว์เซอร์ เปลี่ยนคลิปวิดีโอการทดสอบ Star Excursion Balance Test จากกล้องโทรศัพท์หรือเว็บแคมให้เป็นการประเมินทางคลินิกเชิงปริมาณ — ระยะการเอื้อม ความมั่นคงในการทรงตัว คุณภาพการสัมผัส และรูปแบบการเคลื่อนไหว ให้คะแนนรายทิศทางและส่งออกเป็นรายงาน',
+      'hero.watch':'ชมตัวอย่าง','hero.live':'เปิดแอปพลิเคชันจริง',
+      'hero.stat1':'ทิศทางการเอื้อมที่ติดตาม','hero.stat2':'จุดอ้างอิงร่างกายที่ติดตาม','hero.stat3':'มิติคุณภาพที่ให้คะแนน','hero.stat4':'การวิเคราะห์ในเบราว์เซอร์',
+      'hero.cap1':'การวิเคราะห์สด · โครงกระดูกท่าทาง + คะแนนรายทิศทาง','hero.cap2':'● บันทึกสด',
+      'problem.no':'01 · ปัญหา','problem.title':'การทดสอบทางคลินิกที่ได้รับการยอมรับ แต่ยังวัดด้วยมือ',
+      'problem.lead':'การทดสอบ Star Excursion Balance Test (SEBT) เป็นการประเมินการควบคุมท่าทางแบบพลวัตที่สำคัญในเวชศาสตร์การกีฬาและการฟื้นฟู แต่การใช้งานจริงยังช้า ใช้มือวัด และขึ้นอยู่กับผู้ตรวจ',
+      'problem.pull':'การเอื้อมที่นักกีฬาทำได้ในวินาทีเดียว อาจต้องใช้เวลา <b>เตรียม วัด บันทึก และตรวจสอบ</b> หลายนาที — และตัวเลขยังขึ้นอยู่กับคนอ่านตลับเมตร',
+      'problem.p1':'<b>การเตรียมเทปและตารางดาว</b> — ต้องเตรียมตารางดาว ตลับเมตร และตำแหน่งมาตรฐานก่อนทุกครั้ง',
+      'problem.p2':'<b>การอ่านค่าด้วยมือ</b> — อ่านระยะการเอื้อมด้วยสายตาจากตลับเมตร ณ จังหวะเอื้อมไกลสุด',
+      'problem.p3':'<b>ความแปรปรวนของผู้ตรวจ</b> — คุณภาพการวัดขึ้นอยู่กับการฝึกฝน ความใส่ใจ และการตีความของผู้ตรวจในแต่ละครั้ง',
+      'problem.p4':'<b>การบันทึกที่ช้า</b> — คะแนนถูกคัดลอกด้วยมือ การบันทึกรายครั้งและรายทิศทาง รวมถึงรายงาน ใช้เวลามาก',
+      'test.no':'02 · การทดสอบ','test.title':'การทดสอบ Star Excursion Balance วัดอะไร',
+      'test.lead':'ผู้ถูกทดสอบยืนขาเดียวตรงกลางตารางดาว แล้วเอื้อมขาอีกข้างให้ไกลที่สุด จากนั้นกลับสู่ท่าเริ่มต้น — การเอื้อมสูงสุดภายใต้การทรงตัวขาเดียวที่ท้าทายการควบคุมท่าทางแบบพลวัต',
+      'test.p1':'การเอื้อมแต่ละครั้งถูกบันทึกรายทิศทาง เมตริกทางคลินิกหลักคือ <b>ระยะการเอื้อมมาตรฐาน</b> — ระยะเอื้อมคิดเป็นร้อยละของความยาวขา ซึ่งขจัดผลของขนาดร่างกายและทำให้คะแนนเปรียบเทียบกันได้',
+      'test.formulaLabel':'ระยะเอื้อมมาตรฐาน',
+      'test.formulaNote':'วัดความยาวขาจาก ASIS ถึง medial malleolus ตามระเบียบปฏิบัติทางคลินิก ค่าเฉลี่ยสามครั้งต่อทิศทางรวมเป็นคะแนนรวม',
+      'test.p2':'ผลการทดสอบ SEBT ใช้คัดกรองและติดตามการทรงตัวแบบพลวัต เช่น ข้อเท้าไม่มั่นคงและการฟื้นฟูหลังเอ็นไขว้หน้า (ACL) โดยความไม่สมมาตรของระยะเอื้อมและระยะที่ลดลงบ่งชี้ความบกพร่องของระบบประสาทและกล้ามเนื้อ',
+      'test.legendAll':'ครบทั้งแปดทิศทาง: ANT · AL · LAT · PL · POST · PM · MED · AM','test.cap':'เอื้อม 3 ครั้งต่อทิศทาง · สลับขายืน · ค่าเฉลี่ยของการทดลองรวมเป็นคะแนนรวม',
+      'how.no':'03 · วิธีการทำงาน','how.title':'จากวิดีโอดิบสู่คะแนนทางคลินิก ในหกขั้นตอน',
+      'how.lead':'SEBT.mfu ทำงานวิเคราะห์ท่าทางครบวงจรในเบราว์เซอร์ แค่คลิปจากโทรศัพท์หรือเว็บแคมก็เพียงพอ — ไม่ต้องใช้อุปกรณ์พิเศษ ไม่ต้องติดตั้งซอฟต์แวร์',
+      'how.s1t':'นำเข้าข้อมูล','how.s1':'โหลดคลิปการทดสอบ SEBT หรือวิเคราะห์สดจากกล้อง',
+      'how.s2t':'การตรวจจับท่าทาง','how.s2':'ติดตามจุดอ้างอิงร่างกาย 33 จุดต่อเฟรมด้วย MediaPipe Pose — สะโพก เข่า ข้อเท้า และลำตัว',
+      'how.s3t':'การสอบเทียบ','how.s3':'ตรวจจับขายืนอัตโนมัติ ล็อกพื้นและตารางอ้างอิง และตรวจสอบทิศทาง (Flip A/P)',
+      'how.s4t':'การตรวจจับการเอื้อม','how.s4':'ตรวจจับการเอื้อมแต่ละครั้งรายทิศทาง พร้อมจำแนกคุณภาพการสัมผัสและแรงกระแทก',
+      'how.s5t':'การให้คะแนน','how.s5':'คำนวณระยะเอื้อมเป็นเซนติเมตรและปรับมาตรฐานด้วยความยาวขา ให้คะแนนสี่มิติคุณภาพ',
+      'how.s6t':'รายงาน','how.s6':'สร้างรายงานการวิเคราะห์ทางคลินิก — ดูบนหน้าจอ พิมพ์ได้ และส่งออกเป็น CSV หรือ JSON',
+      'how.noteTag':'หมายเหตุความเป็นส่วนตัว','how.note':'ทุกขั้นตอนทำงานในเครื่องผู้ใช้ วิดีโอไม่เคยออกจากเบราว์เซอร์ จึงเหมาะกับข้อมูลผู้ป่วยในบริบททางคลินิก',
+      'demo.no':'04 · ตัวอย่างสาธิต','demo.title':'ชมการวิเคราะห์ครบกระบวนการภายในหนึ่งนาที',
+      'demo.lead':'คลิปบันทึกหน้าจอนี้แสดงกระบวนการทั้งหมด: โหลดวิดีโอทดสอบ ดูการวิเคราะห์พร้อมติดตามท่าทาง และทบทวนคะแนนที่คำนวณอัตโนมัติพร้อมรายละเอียดระดับการสัมผัส',
+      'demo.cap':'SEBT.mfu v2.1 · บันทึกหน้าจอการทดสอบ · 44 วินาที',
+      'demo.b1t':'ตั้งค่าการทดสอบ','demo.b1':'กรอก ID ผู้เข้าร่วม อายุ หมายเลขการทดลอง ผู้ทดสอบ และความยาวขา ตั้งค่าการตรวจจับขายืนและโมเดล (Full)',
+      'demo.b2t':'การเล่นพร้อมติดตามท่าทาง','demo.b2':'คลิปเล่นพร้อมโครงกระดูกท่าทางสด สอบเทียบล็อก ตรวจจับขายืนและพื้น เปิดการติดตาม 3D',
+      'demo.b3t':'การให้คะแนนอัตโนมัติ','demo.b3':'คำนวณคะแนนรวมจากสี่มิติ — ระยะเอื้อม ความมั่นคงและการทรงตัว คุณภาพการสัมผัส และรูปแบบท่าทาง — พร้อมผลสรุป PASS / FAIL',
+      'demo.b4t':'รายละเอียดและการส่งออก','demo.b4':'เปรียบเทียบโปรไฟล์การเอื้อมกับค่าเฉลี่ยประชากร แสดงเหตุการณ์การสัมผัสแต่ละครั้ง (ทิศทาง ระยะเอื้อม ความเร็วกระแทก ประเภทการสัมผัส) และส่งออก CSV / JSON / พิมพ์ได้ในคลิกเดียว',
+      'scoring.no':'05 · การให้คะแนน','scoring.title':'คะแนนรวมหนึ่งค่า จากสี่มิติที่มีหลักฐานรองรับ',
+      'scoring.lead':'ผลสรุปและคะแนนรวมคำนวณจากสี่มิติที่มีน้ำหนัก แต่ละมิติคำนวณจากข้อมูลท่าทางและการสัมผัสที่บันทึกระหว่างการทดสอบ',
+      'scoring.wt1':'มิติ · น้ำหนัก 35%','scoring.wt2':'มิติ · น้ำหนัก 25%','scoring.wt3':'มิติ · น้ำหนัก 20%','scoring.wt4':'มิติ · น้ำหนัก 20%',
+      'scoring.d1t':'ระยะการเอื้อม','scoring.d1':'ระยะที่ขาเอื้อมไปในแต่ละทิศทาง ปรับมาตรฐานด้วยความยาวขา — เมตริกการเอื้อมมาตรฐานของ SEBT',
+      'scoring.d2t':'การทรงตัวและความมั่นคง','scoring.d2':'คุณภาพการยืนขาเดียวตลอดการเอื้อม: ความมั่นคงของเท้ายืนและพฤติกรรมการยกส้นเท้า',
+      'scoring.d3t':'คุณภาพการสัมผัส','scoring.d3':'ความนุ่มนวลของการวางเท้าเอื้อม — จำแนกเป็นการสัมผัสนุ่มหรือแข็งจากความเร็วกระแทกและการเด้ง',
+      'scoring.d4t':'รูปแบบและท่าทาง','scoring.d4':'การควบคุมการเคลื่อนไหวระหว่างทำภารกิจ รวมถึงการเอียงลำตัวและความสม่ำเสมอของท่าทางตลอดการทดลอง',
+      'scoring.profTitle':'โปรไฟล์การเอื้อมรายทิศทาง','scoring.prof':'แต่ละทิศทางให้คะแนนอิสระและแสดงบนโปรไฟล์การเอื้อม ทำให้เห็นความไม่สมมาตรระหว่างทิศทางและระหว่างขายืนซ้าย-ขวาได้ทันที',
+      'scoring.prof2':'โปรไฟล์ของผู้ถูกทดสอบเปรียบเทียบกับค่าอ้างอิงประชากร — การเปรียบเทียบในแอปใช้ชุดข้อมูลเปิดของ Y-Balance test (University College Dublin)',
+      'scoring.evTitle':'หลักฐานระดับการสัมผัส','scoring.ev':'การเอื้อมทุกครั้งถูกบันทึกในตารางพร้อมทิศทาง ระยะเอื้อม (ร้อยละของความยาวขา) ความเร็วกระแทก การเด้ง คุณภาพ และค่าความเชื่อมั่นการวัดที่สะท้อนจำนวนเฟรมการสัมผัสที่สังเกตได้โดยตรง',
+      'scoring.thDir':'ทิศทาง','scoring.thReach':'ระยะเอื้อม','scoring.thImpact':'ความเร็วกระแทก','scoring.thTouch':'การสัมผัส',
+      'scoring.tableNote':'ตัวอย่างแถวจากตารางเหตุการณ์การสัมผัสของแอป (ค่าตัวอย่างจากคลิปสาธิต)',
+      'tech.no':'06 · เทคโนโลยี','tech.title':'สแตกที่เบาและทันสมัย ทำงานได้ทุกที่',
+      'tech.lead':'SEBT.mfu เป็นเว็บแอปพลิเคชัน — เปิด URL อนุญาตการเข้าถึงกล้อง ระบบวิเคราะห์ทางคลินิกครบถ้วนก็พร้อมใช้ ไม่ต้องติดตั้ง ไม่ต้องใช้ปลั๊กอิน ไม่มีการประมวลผลฝั่งเซิร์ฟเวอร์',
+      'tech.c1t':'คอมพิวเตอร์วิทัศน์','tech.c1':'MediaPipe Pose Landmarker ประมาณจุดอ้างอิงร่างกาย 33 จุดต่อเฟรม เลือกโมเดล Full / Heavy / Lite เพื่อแลกความแม่นยำกับประสิทธิภาพอุปกรณ์',
+      'tech.c2t':'แพลตฟอร์มเว็บ','tech.c2':'สร้างด้วย React และ Vite ออกแบบด้วย Tailwind CSS และโฮสต์บน Vercel — ประสบการณ์หน้าเดียวแบบ Responsive สำหรับเดสก์ท็อป โน้ตบุ๊ก และมือถือ',
+      'tech.c3t':'รายงานทางคลินิก','tech.c3':'คะแนน ผลรายทิศทาง และเหตุการณ์การสัมผัส ถูกรวบรวมเป็นรายงานทางคลินิกที่พิมพ์ได้ พร้อมส่งออก CSV และ JSON สำหรับบันทึกงานวิจัยและการวิเคราะห์เพิ่มเติม',
+      'tech.note':'แอปพลิเคชันโฮสต์สดที่ <a href="https://sebt-mfu.vercel.app/" target="_blank" rel="noopener">sebt-mfu.vercel.app</a> — เปิดแล้วลองทำการทดสอบได้ทันทีในเบราว์เซอร์ของคุณ',
+      'refs.no':'เอกสารอ้างอิง','refs.title':'หลักฐานทางคลินิก',
+      'refs.lead':'ระเบียบการทดสอบ วิธีการปรับมาตรฐาน และแนวทางคะแนนรวมเป็นไปตามวรรณกรรม SEBT ที่เป็นที่ยอมรับ',
+      'about.no':'เกี่ยวกับโครงการ','about.title':'โครงการวิจัยนักศึกษา มหาวิทยาลัยแม่ฟ้าหลวง',
+      'about.mot':'แรงจูงใจ','about.m1':'โครงการนี้เริ่มจากข้อสังเกตง่ายๆ: การทดสอบการทรงตัวที่นักกายภาพบำบัดและแพทย์เวชศาสตร์การกีฬาใช้ทุกวันยังพึ่งตลับเมตรและบันทึกด้วยมือ คอมพิวเตอร์วิทัศน์ก้าวมาถึงจุดที่สามารถวัดค่าเดียวกันได้โดยอัตโนมัติจากวิดีโอธรรมดา',
+      'about.m2':'SEBT.mfu คือการสาธิตแนวคิดนี้ที่ใช้งานได้จริง — กระบวนการวิเคราะห์ครบวงจรที่คลินิกใดก็เปิดใช้จากเบราว์เซอร์ พร้อมผลลัพธ์ตามวิธีทางคลินิกที่ตีพิมพ์',
+      'about.details':'รายละเอียดโครงการ',
+      'about.kInst':'สถาบัน','about.vInst':'มหาวิทยาลัยแม่ฟ้าหลวง เชียงราย ประเทศไทย',
+      'about.kSys':'ระบบ','about.vSys':'ระบบวิเคราะห์ทางคลินิก SEBT · v2.1',
+      'about.kRes':'ผู้วิจัย','about.kSup':'อาจารย์ที่ปรึกษา','about.kLive':'แอปพลิเคชันจริง',
+      'footer.link':'sebt-mfu.vercel.app · มหาวิทยาลัยแม่ฟ้าหลวง','footer.copy':'© <span id="year">2026</span> · โครงการวิจัยนักศึกษา'
+    };
+
+    var TITLES={en:'SEBT.mfu — Automatic Star Excursion Balance Test Analysis',th:'SEBT.mfu — ระบบวิเคราะห์การทดสอบ Star Excursion Balance อัตโนมัติ'};
+    var DESCS={en:'SEBT.mfu is a browser-based clinical analysis system that measures the Star Excursion Balance Test automatically using computer vision. Developed at Mae Fah Luang University.',th:'SEBT.mfu เป็นระบบวิเคราะห์ทางคลินิกที่ทำงานในเบราว์เซอร์ วัดการทดสอบ Star Excursion Balance Test โดยอัตโนมัติด้วยคอมพิวเตอร์วิทัศน์ พัฒนาที่มหาวิทยาลัยแม่ฟ้าหลวง'};
+
+    var current='en';
+    function applyLang(l){
+      if(!LANGS[l]){l='en';}
+      current=l;
+      document.documentElement.lang=l;
+      var dict=LANGS[l];
+      document.querySelectorAll('[data-i18n]').forEach(function(el){
+        var k=el.getAttribute('data-i18n');
+        if(dict[k]!==undefined){el.textContent=dict[k];}
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+        var k=el.getAttribute('data-i18n-html');
+        if(dict[k]!==undefined){el.innerHTML=dict[k];}
+      });
+      document.title=TITLES[l];
+      var md=document.querySelector('meta[name="description"]');
+      if(md){md.setAttribute('content',DESCS[l]);}
+      document.querySelectorAll('.lang-btn').forEach(function(b){
+        var active=(b.getAttribute('data-lang')===l);
+        b.setAttribute('aria-pressed',active?'true':'false');
+        b.classList.toggle('active',active);
+      });
+      try{localStorage.setItem('sebt-lang',l);}catch(e){}
+    }
+    document.querySelectorAll('.lang-btn').forEach(function(b){
+      b.addEventListener('click',function(){applyLang(b.getAttribute('data-lang'));});
+    });
+    var saved=null;
+    try{saved=localStorage.getItem('sebt-lang');}catch(e){}
+    var q=(location.search.match(/[?&]lang=(en|th)/)||[])[1];
+    var nav=(navigator.language||'en').toLowerCase();
+    var initLang=q||saved||(nav.indexOf('th')===0?'th':'en');
+    applyLang(initLang);
+
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      var items=document.querySelectorAll('.rv');
+      if('IntersectionObserver' in window){
+        var io=new IntersectionObserver(function(entries){
+          entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}});
+        },{threshold:.12});
+        items.forEach(function(el){io.observe(el);});
+      }else{
+        items.forEach(function(el){el.classList.add('on');});
+      }
+    }else{
+      document.querySelectorAll('.rv').forEach(function(el){el.classList.add('on');});
+    }
+  })();
+</script>
+</body>
+</html>
